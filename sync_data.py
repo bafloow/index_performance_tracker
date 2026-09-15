@@ -1,15 +1,11 @@
 from ticker_scraper import get_sp500_data, get_nasdaq100_data
 from db import get_connection
-from price_history_scraper import get_historical_price_data
 from time import sleep
 
 wiki_sp500 = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
 wiki_nasdaq100 = 'https://en.wikipedia.org/wiki/List_of_NASDAQ-100_companies'
 slick_sp500 = 'https://www.slickcharts.com/sp500'
 slick_nasdaq100 = 'https://www.slickcharts.com/nasdaq100'
-
-def modify_url(symbol):
-    return f'https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=1y&interval=1d&events=history'
 
 
 datasets = {
@@ -95,6 +91,7 @@ def sync_index_to_db(con, index_name, companies):
 
         cur.execute("SELECT symbol, id FROM company_info")
         company_map = dict(cur.fetchall())
+        
 
         #5 Fill index_components
         index_comp_tuples = [ (
