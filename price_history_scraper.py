@@ -37,9 +37,9 @@ def get_historical_price_data(url):
 
     try:
         validated_data = YahooResponse.model_validate(res_json)
-        print('Response structure is correct')
+        #print('Response structure is correct')
     except ValidationError as e:
-        print(f'Validation error: {e}')
+        #print(f'Validation error: {e}')
         exit()
 
     chart_data = validated_data.chart.result[0]
@@ -56,8 +56,8 @@ def get_historical_price_data(url):
             'open': quote_data.open
         }
     )
-    
-    
+    return df
+
 
 
 
