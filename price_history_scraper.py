@@ -56,6 +56,10 @@ def get_historical_price_data(url):
             'open': quote_data.open
         }
     )
+
+    df.dropna(subset=['open','high','low','close'])
+    df['volume'] = df['volume'].fillna(0)
+    
     return df
 
 
