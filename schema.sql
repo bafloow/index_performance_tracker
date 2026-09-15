@@ -41,7 +41,6 @@ CREATE TABLE index_components (
 );
 
 CREATE TABLE daily_prices (
-    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     company_id INT NOT NULL,
     date DATE NOT NULL,
     close DEC(12,4) NOT NULL,
@@ -49,9 +48,9 @@ CREATE TABLE daily_prices (
     volume BIGINT NOT NULL,
     high DEC(12,4) NOT NULL,
     open DEC(12,4) NOT NULL,
-    FOREIGN KEY(company_id)
-    REFERENCES company_info(id) ON DELETE CASCADE,
-    UNIQUE (company_id, date)
+    PRIMARY KEY (company_id, date),
+    FOREIGN KEY (company_id) 
+	REFERENCES company_info(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_prices_company_date ON daily_prices (company_id, date DESC);
+
