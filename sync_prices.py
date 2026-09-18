@@ -17,60 +17,65 @@ def modify_url(symbol, start_day = None, end_day = None):
     return f'https://query1.finance.yahoo.com/v8/finance/chart/{yahoo_symbol}?period1={start_ts}&period2={end_ts}&interval=1d&events=history'
 
 
-def insert_prices(url, company_id, con, cur):
+def insert_prices(url, company_id, con):
     df = get_historical_price_data(url)
-    df['company_id'] = company_id
+    if df.empty:
+        return
     
+    df['company_id'] = company_id
     price_tuples = [tuple(x) for x in df.to_numpy()]
             
     cols = ','.join(list(df.columns))
     values = ', '.join(['%s'] * len(df.columns))
-    
-    cur.executemany(
-        f"""
-        INSERT INTO daily_prices({cols})
-        VALUES ({values})
-        ON CONFLICT (company_id, date) DO UPDATE
-        SET close = EXCLUDED.close,
-            low = EXCLUDED.low,
-            volume = EXCLUDED.volume,
-            high = EXCLUDED.high,
-            open = EXCLUDED.open
-        """,
-        (price_tuples)
-        )
+
+    with con.cursor() as cur:
+        cur.executemany(
+            f"""
+            INSERT INTO daily_prices({cols})
+            VALUES ({values})
+            ON CONFLICT (company_id, date) DO UPDATE
+            SET close = EXCLUDED.close,
+                low = EXCLUDED.low,
+                volume = EXCLUDED.volume,
+                high = EXCLUDED.high,
+                open = EXCLUDED.open
+            """,
+            (price_tuples)
+            )
     con.commit()
 
     
-today = datetime.today().date()
-yesterday = today - timedelta(days=1)
-con = get_connection()
-cur = con.cursor()
+def sync_daily_prices():
+    today = datetime.today().date()
+    yesterday = today - timedelta(days=1)
+
+    con = get_connection()
+    try:
+        with con.cursor() as cur:
+            cur.execute(
+                """
+                SELECT c.symbol, c.id, MAX(p.date) 
+                FROM company_info c
+                LEFT JOIN daily_prices p
+                ON c.id = p.company_id
+                GROUP BY c.symbol, c.id 
+                """)
+            unique_companies_dates = cur.fetchall()
+
+        for company_symbol, company_id, max_date  in unique_companies_dates:
+            if max_date is None:
+                ready_url = modify_url(company_symbol)
+                
+            elif max_date < yesterday:
+                ready_url = modify_url(company_symbol, max_date, yesterday)
+            
+            else:
+                continue
+
+            insert_prices(ready_url, company_id, con)
+    finally:
+        con.close()
 
 
-cur.execute("SELECT symbol, id FROM company_info")
-unique_companies = sorted(cur.fetchall())
-
-for company in unique_companies:
-    company_id = company[1]
-    company_symbol = company[0]
-    cur.execute("SELECT MAX(date) FROM daily_prices WHERE company_id = %s",(company_id,))
-    res = cur.fetchone()
-
-    if res[0] is None:
-        ready_url = modify_url(company_symbol)
-        insert_prices(ready_url, company_id, con, cur)
-        
-        
-
-    elif res[0] < yesterday:
-        ready_url = modify_url(company_symbol, res[0], yesterday)
-        insert_prices(ready_url, company_id, con, cur)
-        
-
-    else:
-        continue
-
-
-
-
+if __name__ == '__main__':
+    sync_daily_prices()
