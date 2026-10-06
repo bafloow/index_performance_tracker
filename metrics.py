@@ -3,6 +3,19 @@ import pandas as pd
 import numpy as np
 
 
+def calc_garman_klass_vol(df_stock):
+
+    log_hl = np.log(df_stock['high']/df_stock['low'])
+    log_co = np.log(df_stock['close']/df_stock['open'])
+
+    daily_gk = 0.5 * (log_hl ** 2) - (2 * np.log(2) - 1 ) * (log_co ** 2)
+
+    annualized_variance = daily_gk.mean() * 252
+    annualized_volatility = np.sqrt(annualized_variance)
+
+    return annualized_volatility
+
+
 def get_index_data(index_name, period, con):
     with con.cursor() as cur:
         cur.execute(
@@ -17,6 +30,7 @@ def get_index_data(index_name, period, con):
             ci.symbol, s.name AS sector,
             ss.name AS sub_sector,
             dp.date, dp.close, dp.open, dp.volume,
+            dp.high, dp.low,
             ic.weight_percentage AS weight
             FROM indexes ind
             JOIN index_components ic ON ic.index_id = ind.id
@@ -40,6 +54,8 @@ def get_index_data(index_name, period, con):
             df['close'] = df['close'].astype(float)
             df['open'] = df['open'].astype(float)
             df['weight'] = df['weight'].astype(float) / 100
+            df['high'] = df['high'].astype(float)
+            df['low'] = df['low'].astype(float)
 
         return df
         
@@ -64,7 +80,8 @@ def get_total_return(df_daily):
 
     df['total_return'] = (df['end_price'] - df['start_price'])/df['start_price']
     df['contribution'] = df['total_return'] * df['weight']
-    df['volatility'] = df['daily_std'] * np.sqrt(252)
+    df['std_vol'] = df['daily_std'] * np.sqrt(252)
+    df['gk_vol'] = df_daily.groupby('symbol').apply(calc_garman_klass_vol)
 
     return df
 
