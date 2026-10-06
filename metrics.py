@@ -86,49 +86,30 @@ def get_total_return(df_daily):
 
     
 
-def get_sector_performance(df_week):
+def get_sector_performance(df_week, group='sector'):
 
    df_copy = df_week.copy()
-   sector_weight_sum = df_copy.groupby('sector')['weight'].transform('sum')
-   df_copy['intra_sector_weight'] = df_copy['weight'] / sector_weight_sum
+   group_weight_sum = df_copy.groupby(group)['weight'].transform('sum')
+   df_copy['intra_group_weight'] = df_copy['weight'] / group_weight_sum
 
-   df_copy['weighted_var'] = df_copy['var'] * df_copy['intra_sector_weight']
-   df_copy['weighted_gk_var'] = df_copy['gk_var'] * df_copy['intra_sector_weight']
+   df_copy['weighted_var'] = df_copy['var'] * df_copy['intra_group_weight']
+   df_copy['weighted_gk_var'] = df_copy['gk_var'] * df_copy['intra_group_weight']
 
-   df = df_copy.groupby('sector').agg(
+   df = df_copy.groupby(group).agg(
         weight=('weight','sum'),
         contribution=('contribution','sum'),
         var=('weighted_var','sum'),
         gk_var=('weighted_gk_var','sum')
    )
 
-   df['sector_return'] = df['contribution'] / df['weight']
+   df['total_return'] = df['contribution'] / df['weight']
    df['std_vol'] = np.sqrt(df['var'] * 252)
    df['gk_vol'] = np.sqrt(df['gk_var'] * 252)
    
    return df
 
-def get_sub_sector_performance(df_week):
 
-    df_copy = df_week.copy()
-    sub_sector_weight_sum = df_copy.groupby('sub_sector')['weight'].transform('sum')
-    df_copy['intra_sector_weight'] = df_copy['weight'] / sub_sector_weight_sum
 
-    df_copy['weighted_var'] = df_copy['var'] * df_copy['intra_sector_weight']
-    df_copy['weighted_gk_var'] = df_copy['gk_var'] * df_copy['intra_sector_weight']
-
-    df = df_copy.groupby('sub_sector').agg(
-        weight=('weight','sum'),
-        contribution=('contribution','sum'),
-        var=('weighted_var','sum'),
-        gk_var=('weighted_gk_var','sum')
-    )
-
-    df['sub_sector_return'] = df['contribution'] / df['weight']
-    df['std_vol'] = np.sqrt(df['var'] * 252)
-    df['gk_vol'] = np.sqrt(df['gk_var'] * 252)
-    
-    return df
      
 
 
