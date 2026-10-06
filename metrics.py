@@ -67,7 +67,6 @@ def get_daily_returns(df):
 def get_total_return(df_daily):
 
     df = df_daily.groupby('symbol').agg(
-        symbol=('symbol','first'),
         sector=('sector','first'),
         sub_sector=('sub_sector', 'first'),
         weight=('weight', 'first'),
@@ -86,7 +85,7 @@ def get_total_return(df_daily):
 
     
 
-def get_sector_performance(df_week, group='sector'):
+def get_group_performance(df_week, group='sector'):
 
    df_copy = df_week.copy()
    group_weight_sum = df_copy.groupby(group)['weight'].transform('sum')
@@ -107,6 +106,17 @@ def get_sector_performance(df_week, group='sector'):
    df['gk_vol'] = np.sqrt(df['gk_var'] * 252)
    
    return df
+
+
+def get_top_gainers(df_week):
+    columns = ['sector','sub_sector','total_return','contribution','gk_vol']
+    winners = df_week.nlargest(5,'total_return')[columns]
+    return winners
+
+def get_top_losers(df_week):
+    columns = ['sector','sub_sector','total_return','contribution','gk_vol']
+    losers = df_week.nsmallest(5,'total_return')[columns]
+    return losers
 
 
 
