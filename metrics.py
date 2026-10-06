@@ -3,17 +3,14 @@ import pandas as pd
 import numpy as np
 
 
-def calc_garman_klass_vol(df_stock):
+def calc_daily_gk(df_stock):
 
     log_hl = np.log(df_stock['high']/df_stock['low'])
     log_co = np.log(df_stock['close']/df_stock['open'])
 
     daily_gk = 0.5 * (log_hl ** 2) - (2 * np.log(2) - 1 ) * (log_co ** 2)
-
-    annualized_variance = daily_gk.mean() * 252
-    annualized_volatility = np.sqrt(annualized_variance)
-
-    return annualized_volatility
+    
+    return daily_gk
 
 
 def get_index_data(index_name, period, con):
@@ -63,7 +60,8 @@ def get_index_data(index_name, period, con):
 
 def get_daily_returns(df):
     df['daily_return'] = df.sort_values(by=['date'], ascending=True).groupby(['symbol'])['close'].pct_change()
-    df.sort_values(['symbol','date']) 
+    df['daily_gk'] = calc_daily_gk(df)
+    df = df.sort_values(['symbol','date']).reset_index(drop=True) 
     return df
 
 def get_total_return(df_daily):
@@ -75,34 +73,61 @@ def get_total_return(df_daily):
         weight=('weight', 'first'),
         start_price=('close', 'first'),
         end_price=('close', 'last'),
-        daily_std=('daily_return', 'std')
+        var=('daily_return', 'var'),
+        gk_var=('daily_gk','mean')
     )
 
     df['total_return'] = (df['end_price'] - df['start_price'])/df['start_price']
     df['contribution'] = df['total_return'] * df['weight']
-    df['std_vol'] = df['daily_std'] * np.sqrt(252)
-    df['gk_vol'] = df_daily.groupby('symbol').apply(calc_garman_klass_vol)
+    df['std_vol'] = np.sqrt(df['var'] * 252)
+    df['gk_vol'] = np.sqrt(df['gk_var'] * 252)
 
     return df
 
     
 
 def get_sector_performance(df_week):
-    
-    df = df_week.groupby('sector').agg(
-        weight=('weight','sum'),
-        contribution=('contribution','sum')
-    )
 
-    return df
+   df_copy = df_week.copy()
+   sector_weight_sum = df_copy.groupby('sector')['weight'].transform('sum')
+   df_copy['intra_sector_weight'] = df_copy['weight'] / sector_weight_sum
+
+   df_copy['weighted_var'] = df_copy['var'] * df_copy['intra_sector_weight']
+   df_copy['weighted_gk_var'] = df_copy['gk_var'] * df_copy['intra_sector_weight']
+
+   df = df_copy.groupby('sector').agg(
+        weight=('weight','sum'),
+        contribution=('contribution','sum'),
+        var=('weighted_var','sum'),
+        gk_var=('weighted_gk_var','sum')
+   )
+
+   df['sector_return'] = df['contribution'] / df['weight']
+   df['std_vol'] = np.sqrt(df['var'] * 252)
+   df['gk_vol'] = np.sqrt(df['gk_var'] * 252)
+   
+   return df
 
 def get_sub_sector_performance(df_week):
 
-    df = df_week.groupby('sub_sector').agg(
+    df_copy = df_week.copy()
+    sub_sector_weight_sum = df_copy.groupby('sub_sector')['weight'].transform('sum')
+    df_copy['intra_sector_weight'] = df_copy['weight'] / sub_sector_weight_sum
+
+    df_copy['weighted_var'] = df_copy['var'] * df_copy['intra_sector_weight']
+    df_copy['weighted_gk_var'] = df_copy['gk_var'] * df_copy['intra_sector_weight']
+
+    df = df_copy.groupby('sub_sector').agg(
         weight=('weight','sum'),
-        contribution=('contribution','sum')
+        contribution=('contribution','sum'),
+        var=('weighted_var','sum'),
+        gk_var=('weighted_gk_var','sum')
     )
 
+    df['sub_sector_return'] = df['contribution'] / df['weight']
+    df['std_vol'] = np.sqrt(df['var'] * 252)
+    df['gk_vol'] = np.sqrt(df['gk_var'] * 252)
+    
     return df
      
 
