@@ -179,8 +179,37 @@ def get_market_breadth(df_breadth):
     }
 
 
+def get_index_summary(index_name):
+    con = get_connection()
+    try:
+        raw_prices = get_index_recent_prices(index_name=index_name, con=con, period=5)
+        raw_breadth = get_index_breadth_data(index_name=index_name, con=con)
+
+        daily_returns = get_daily_returns(raw_prices)
+        total_returns = get_total_return(daily_returns)
+
+        sector_performance = get_group_performance(total_returns,group='sector')
+        sub_sector_performance = get_group_performance(total_returns,group='sub_sector')
+
+        best_returns = get_top_gainers(total_returns)
+        worst_returns = get_top_losers(total_returns)
+
+        market_breadth = get_market_breadth(raw_breadth)
+
+    finally:
+        con.close()
+
+    index_summary = {
+        'total_returns' : total_returns,
+        'sector_performance' : sector_performance,
+        'sub_sector_performance' : sub_sector_performance,
+        'top_5_gainers' : best_returns,
+        'top_5_losers' : worst_returns,
+        'market_breadth' : market_breadth
+    }
+
+    return index_summary
 
 
-
-
-
+    
+    
