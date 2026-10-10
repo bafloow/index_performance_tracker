@@ -1,4 +1,4 @@
-from db import get_connection
+from db import get_connection, get_available_indexes
 import pandas as pd
 import numpy as np
 
@@ -179,25 +179,22 @@ def get_market_breadth(df_breadth):
     }
 
 
-def get_index_summary(index_name):
-    con = get_connection()
-    try:
-        raw_prices = get_index_recent_prices(index_name=index_name, con=con, period=5)
-        raw_breadth = get_index_breadth_data(index_name=index_name, con=con)
+def get_index_summary(index_name, con):
+    
+    
+    raw_prices = get_index_recent_prices(index_name=index_name, con=con, period=5)
+    raw_breadth = get_index_breadth_data(index_name=index_name, con=con)
 
-        daily_returns = get_daily_returns(raw_prices)
-        total_returns = get_total_return(daily_returns)
+    daily_returns = get_daily_returns(raw_prices)
+    total_returns = get_total_return(daily_returns)
 
-        sector_performance = get_group_performance(total_returns,group='sector')
-        sub_sector_performance = get_group_performance(total_returns,group='sub_sector')
+    sector_performance = get_group_performance(total_returns,group='sector')
+    sub_sector_performance = get_group_performance(total_returns,group='sub_sector')
 
-        best_returns = get_top_gainers(total_returns)
-        worst_returns = get_top_losers(total_returns)
+    best_returns = get_top_gainers(total_returns)
+    worst_returns = get_top_losers(total_returns)
 
-        market_breadth = get_market_breadth(raw_breadth)
-
-    finally:
-        con.close()
+    market_breadth = get_market_breadth(raw_breadth)
 
     index_summary = {
         'total_returns' : total_returns,
@@ -210,6 +207,34 @@ def get_index_summary(index_name):
 
     return index_summary
 
+def get_market_summary(index_names=None):
+    con = get_connection()
+    try:
+        available_indexes = get_available_indexes()
+        if not available_indexes:
+            raise RuntimeError("No available indexes in database")
+
+        if index_names is None:
+            target_indexes = available_indexes
+        else:
+            if isinstance(index_names,str):
+                index_names = [index_names]
+            elif not isinstance(index_names,(list,tuple)):
+                raise TypeError("Index name must be a string or a list")
+
+            diff = set(index_names) - set(available_indexes)
+            if diff:
+                missing = ", ".join(diff)
+                raise ValueError(f"Unrecognized indexes: {missing}")
+
+        
+        market_summary = {}
+        for index in target_indexes:
+            market_summary[index] = get_index_summary(index,con)
+    finally:
+        con.close()
+
+    return market_summary
 
     
     
