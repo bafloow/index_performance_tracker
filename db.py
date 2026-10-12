@@ -20,4 +20,15 @@ def get_connection():
         port=port
      )
     return connection
+
+def get_available_indexes():
+    con = get_connection()
+    try:
+        with con.cursor() as cur:
+            cur.execute("""SELECT DISTINCT name FROM indexes""")
+
+            index_names = [item[0] for item in cur.fetchall()]
+    finally:
+        con.close()
+    return index_names
         
