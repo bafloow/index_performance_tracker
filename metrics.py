@@ -218,11 +218,16 @@ def get_market_summary(index_names=None, period=5):
             target_indexes = available_indexes
         else:
             if isinstance(index_names,str):
-                index_names = [index_names]
-            elif not isinstance(index_names,(list,tuple)):
+                target_indexes = [index_names.strip()]
+            elif isinstance(index_names,(list,tuple)):
+                target_indexes = [name.strip() for name in index_names]
+                if not target_indexes:
+                    raise ValueError("Index list cannot be empty")
+            else:
                 raise TypeError("Index name must be a string or a list")
 
-            diff = set(index_names) - set(available_indexes)
+            
+            diff = set(target_indexes) - set(available_indexes)
             if diff:
                 missing = ", ".join(diff)
                 raise ValueError(f"Unrecognized indexes: {missing}")
@@ -235,6 +240,4 @@ def get_market_summary(index_names=None, period=5):
         con.close()
 
     return market_summary
-
-    
     
