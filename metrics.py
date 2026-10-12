@@ -179,10 +179,10 @@ def get_market_breadth(df_breadth):
     }
 
 
-def get_index_summary(index_name, con):
+def get_index_summary(index_name, con, period):
     
     
-    raw_prices = get_index_recent_prices(index_name=index_name, con=con, period=5)
+    raw_prices = get_index_recent_prices(index_name=index_name, con=con, period=period)
     raw_breadth = get_index_breadth_data(index_name=index_name, con=con)
 
     daily_returns = get_daily_returns(raw_prices)
@@ -207,7 +207,7 @@ def get_index_summary(index_name, con):
 
     return index_summary
 
-def get_market_summary(index_names=None):
+def get_market_summary(index_names=None, period=5):
     con = get_connection()
     try:
         available_indexes = get_available_indexes()
@@ -230,7 +230,7 @@ def get_market_summary(index_names=None):
         
         market_summary = {}
         for index in target_indexes:
-            market_summary[index] = get_index_summary(index,con)
+            market_summary[index] = get_index_summary(index,con,period)
     finally:
         con.close()
 
