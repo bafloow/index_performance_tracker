@@ -89,7 +89,25 @@ def get_index_breadth_data(index_name, con):
 
         return df
 
-    
+def get_relations(index_name, con):
+    with con.cursor() as cur:
+        cur.execute(
+            """
+            SELECT ci.symbol, s.name AS sector, ss.name AS sub_sector 
+            FROM company_info ci
+            LEFT JOIN sectors s ON ci.sector_id = s.id
+            LEFT JOIN sub_sectors ss ON ci.sub_sector_id = ss.id
+            JOIN index_components ic ON ci.id = ic.company_id 
+            JOIN indexes i ON ic.index_id = i.id
+            WHERE i.name = %s    
+            """,(index_name,)
+        )
+        rows = cur.fetchall()
+        cols = [desc[0] for desc in cur.desctription]
+
+        df = pd.DataFrame(data=rows, columns=cols)
+        return df    
+
 
 def get_daily_returns(df):
     df['daily_return'] = df.sort_values(by=['date'], ascending=True).groupby(['symbol'])['close'].pct_change()
@@ -181,6 +199,7 @@ def get_market_breadth(df_breadth):
 
 def get_index_summary(index_name, con, period):
     
+    stock_sector_relations = get_relations(index_name=index_name, con=con)
     
     raw_prices = get_index_recent_prices(index_name=index_name, con=con, period=period)
     raw_breadth = get_index_breadth_data(index_name=index_name, con=con)
@@ -202,7 +221,8 @@ def get_index_summary(index_name, con, period):
         'sub_sector_performance' : sub_sector_performance,
         'top_5_gainers' : best_returns,
         'top_5_losers' : worst_returns,
-        'market_breadth' : market_breadth
+        'market_breadth' : market_breadth,
+        'relations' : stock_sector_relations
     }
 
     return index_summary
