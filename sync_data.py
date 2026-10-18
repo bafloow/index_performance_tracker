@@ -8,16 +8,16 @@ slick_sp500 = 'https://www.slickcharts.com/sp500'
 slick_nasdaq100 = 'https://www.slickcharts.com/nasdaq100'
 
 
-def sync_index_to_db(con, index_name, companies):
+def sync_index_to_db(con, index_name, index_symbol, companies):
         with con.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO indexes(name)
-                VALUES (%s)
-                ON CONFLICT(name) DO UPDATE SET name = EXCLUDED.name
+                INSERT INTO indexes(name, symbol)
+                VALUES (%s, %s)
+                ON CONFLICT(name) DO UPDATE SET symbol = EXCLUDED.symbol
                 RETURNING id;
                 """,
-                (index_name,)
+                (index_name, index_symbol)
             )
             index_id = cur.fetchone()[0]
 
@@ -108,14 +108,14 @@ def sync_all_indexes():
     sp500_data = get_sp500_data(wiki_sp500, slick_sp500)
     nasdaq100_data = get_nasdaq100_data(wiki_nasdaq100, slick_nasdaq100, sp500_data)
     datasets = {
-        "S&P500": sp500_data,
-        "Nasdaq100": nasdaq100_data
+        "S&P500": (sp500_data, "^GSPC"),
+        "Nasdaq100": (nasdaq100_data, "^NDX")
         }
 
     con = get_connection()
     try:
-        for name, data in datasets.items():
-            sync_index_to_db(con, name, data)
+        for name, (data,symbol) in datasets.items():
+            sync_index_to_db(con, name, symbol, data)
             sleep(1)
     finally:
          con.close()

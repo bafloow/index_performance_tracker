@@ -14,7 +14,8 @@ CREATE TABLE sub_sectors (
 
 CREATE TABLE indexes (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    name VARCHAR(255) NOT NULL UNIQUE
+    name VARCHAR(255) NOT NULL UNIQUE,
+    symbol VARCHAR(20) NOT NULL UNIQUE
 );
 
 CREATE TABLE company_info (
@@ -53,4 +54,16 @@ CREATE TABLE daily_prices (
 	REFERENCES company_info(id) ON DELETE CASCADE
 );
 
+CREATE TABLE index_prices (
+    index_id INT NOT NULL,
+    date DATE NOT NULL,
+    close DEC(12,4) NOT NULL,
+    low DEC(12,4) NOT NULL,
+    volume BIGINT NOT NULL,
+    high DEC(12,4) NOT NULL,
+    open DEC(12,4) NOT NULL,
+    PRIMARY KEY (index_id, date),
+    FOREIGN KEY (index_id)
+    REFERENCES indexes(id) ON DELETE CASCADE
+);
 
