@@ -13,7 +13,7 @@ def calc_daily_gk(df_stock):
     return daily_gk
 
 
-def get_index_recent_prices(index_name, con, period=5):
+def get_index_company_data(index_name, con, period=5):
     with con.cursor() as cur:
         cur.execute(
             f"""
@@ -108,6 +108,37 @@ def get_relations(index_name, con):
         df = pd.DataFrame(data=rows, columns=cols)
         return df    
 
+def get_cash_index_data(index_name,period,con):
+    with con.cursor() as cur:
+        cur.execute(
+            f"""
+            WITH newest_dates as (
+            SELECT DISTINCT date
+            FROM index_prices
+            ORDER BY date DESC
+            LIMIT {period + 1}
+            )
+            SELECT i.symbol, ip.date, ip.close, ip.open, ip.high, ip.low 
+            FROM index_prices ip
+            JOIN indexes i ON i.id = ip.index_id
+            JOIN newest_dates nd ON ip.date = nd.date
+            WHERE i.name = %s
+            ORDER BY i.symbol, ip.date
+            """,(index_name,)
+        )
+        rows = cur.fetchall()
+        cols = [desc[0] for desc in cur.description]
+        
+        df = pd.DataFrame(data=rows,columns=cols)
+
+        if not df.empty:
+            df['date'] = pd.to_datetime(df['date'])
+            df['close'] = df['close'].astype(float)
+            df['open'] = df['open'].astype(float)
+            df['high'] = df['high'].astype(float)
+            df['low'] = df['low'].astype(float)
+
+        return df
 
 def get_daily_returns(df):
     df['daily_return'] = df.sort_values(by=['date'], ascending=True).groupby(['symbol'])['close'].pct_change()
@@ -115,7 +146,7 @@ def get_daily_returns(df):
     df = df.sort_values(['symbol','date']).reset_index(drop=True) 
     return df
 
-def get_total_return(df_daily):
+def get_companies_total_return(df_daily):
 
     df = df_daily.groupby('symbol').agg(
         sector=('sector','first'),
@@ -134,6 +165,27 @@ def get_total_return(df_daily):
 
     return df
 
+def get_cash_index_total_return(df_daily):
+
+    df_copy = df_daily.sort_values('date')
+
+    start_price = df_copy['close'].iloc[0]
+    end_price = df_copy['close'].iloc[-1]
+
+    total_return = (end_price - start_price)/start_price
+
+    std_vol = np.sqrt(df_copy['daily_return'].var() * 252)
+    gk_vol = np.sqrt(df_copy['daily_gk'].mean() * 252)
+
+    df = pd.DataFrame({
+        'symbol':df_copy['symbol'].first(),
+        'total_return':total_return,
+        'start_price':start_price,
+        'end_price':end_price,
+        'std_vol':std_vol,
+        'gk_vol':gk_vol
+    })
+    return df
     
 
 def get_group_performance(df_week, group='sector'):
@@ -199,30 +251,34 @@ def get_market_breadth(df_breadth):
 
 def get_index_summary(index_name, con, period):
     
-    stock_sector_relations = get_relations(index_name=index_name, con=con)
-    
-    raw_prices = get_index_recent_prices(index_name=index_name, con=con, period=period)
+    relations = get_relations(index_name=index_name, con=con)
+    raw_company_prices = get_index_company_data(index_name=index_name, con=con, period=period)
+    raw_index_prices = get_cash_index_data(index_name=index_name,con=con, period=period)
     raw_breadth = get_index_breadth_data(index_name=index_name, con=con)
 
-    daily_returns = get_daily_returns(raw_prices)
-    total_returns = get_total_return(daily_returns)
+    company_daily_returns = get_daily_returns(raw_company_prices)
+    company_performance = get_companies_total_return(company_daily_returns)
 
-    sector_performance = get_group_performance(total_returns,group='sector')
-    sub_sector_performance = get_group_performance(total_returns,group='sub_sector')
+    index_daily_returns = get_daily_returns(raw_index_prices)
+    index_performance= get_cash_index_total_return(index_daily_returns)
 
-    best_returns = get_top_gainers(total_returns)
-    worst_returns = get_top_losers(total_returns)
+    sector_performance = get_group_performance(company_performance,group='sector')
+    sub_sector_performance = get_group_performance(company_performance,group='sub_sector')
+    top_gainers = get_top_gainers(company_performance)
+    top_losers = get_top_losers(company_performance)
+    breadth = get_market_breadth(raw_breadth)
 
-    market_breadth = get_market_breadth(raw_breadth)
+    clean_company_perf = company_performance.drop(columns=['var','gk_var'])
 
     index_summary = {
-        'total_returns' : total_returns,
+        'index_performance' : index_performance,
+        'company_performance' : clean_company_perf,
         'sector_performance' : sector_performance,
         'sub_sector_performance' : sub_sector_performance,
-        'top_5_gainers' : best_returns,
-        'top_5_losers' : worst_returns,
-        'market_breadth' : market_breadth,
-        'relations' : stock_sector_relations
+        'top_gainers' : top_gainers,
+        'top_losers' : top_losers,
+        'market_breadth' : breadth,
+        'relations' : relations
     }
 
     return index_summary
