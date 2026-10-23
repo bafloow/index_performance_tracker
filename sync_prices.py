@@ -77,7 +77,7 @@ def sync_all_prices():
                     GROUP BY c.symbol, c.id 
                     """
     index_query = """
-                    SELECT i.id, i.symbol, MAX(ip.date)
+                    SELECT i.symbol, i.id, MAX(ip.date)
                     FROM indexes i
                     LEFT JOIN index_prices ip
                     ON i.id = ip.index_id
