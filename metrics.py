@@ -210,8 +210,10 @@ def get_group_performance(df_week, group='sector'):
    df['total_return'] = df['contribution'] / df['weight']
    df['std_vol'] = np.sqrt(df['var'] * 252)
    df['gk_vol'] = np.sqrt(df['gk_var'] * 252)
+
+   clean_df = df.drop(columns=['var','gk_var']).reset_index()
    
-   return df
+   return clean_df
 
 
 def get_top_gainers(df_week):
@@ -276,7 +278,8 @@ def get_index_summary(index_name, con, period):
     top_losers = get_top_losers(company_performance)
     breadth = get_market_breadth(raw_breadth)
 
-    clean_company_perf = company_performance.drop(columns=['var','gk_var'])
+    clean_company_perf = company_performance.drop(columns=['var','gk_var']).reset_index()
+    clean_company_perf.rename(columns={'symbol':'company'},inplace=True)
 
     index_summary = {
         'index_performance' : index_performance,
