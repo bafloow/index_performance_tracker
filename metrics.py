@@ -64,11 +64,13 @@ def get_index_breadth_data(index_name, con):
             SELECT company_id, close,
             AVG(close) OVER(PARTITION BY company_id ORDER BY date
             ROWS BETWEEN 49 PRECEDING AND CURRENT ROW) AS sma_50,
+            AVG(close) OVER (PARTITION BY company_id ORDER BY date
+            ROWS BETWEEN 199 PRECEDING AND CURRENT ROW) as sma_200,
             ROW_NUMBER() OVER(PARTITION BY company_id ORDER BY date DESC) AS rnk
             FROM daily_prices 
             )
             SELECT ci.symbol, s.name AS sector,
-            rd.close, rd.sma_50
+            rd.close, rd.sma_50, rd.sma_200
             FROM indexes ind
             JOIN index_components ic ON ic.index_id = ind.id
             JOIN company_info ci ON ci.id = ic.company_id
@@ -86,6 +88,7 @@ def get_index_breadth_data(index_name, con):
         if not df.empty:
             df['close'] = df['close'].astype(float)
             df['sma_50'] = df['sma_50'].astype(float)
+            df['sma_200'] = df['sma_200'].astype(float)
 
         return df
 
@@ -224,28 +227,33 @@ def get_top_losers(df_week):
 def get_market_breadth(df_breadth):
     df_copy = df_breadth.copy()
     df_copy['above_sma50'] = df_copy['close'] > df_copy['sma_50']
+    df_copy['above_sma200'] = df_copy['close'] > df_copy['sma_200']
 
     total_stocks = len(df_copy)
-    above_count = df_copy['above_sma50'].sum()
-    below_count = total_stocks - above_count
-    pct_above = round((above_count / total_stocks)*100,2)
+    above50_count = df_copy['above_sma50'].sum()
+    pct_above50 = round((above50_count / total_stocks)*100,2)
+
+    above200_count = df_copy['above_sma200'].sum()
+    pct_above200 = round((above200_count / total_stocks)*100,2)
 
     index_breadth = {
         'total_stocks' : total_stocks,
-        'above_count' : above_count,
-        'below_count' : below_count,
-        'pct_above' : pct_above
+        'above50' : above50_count,
+        'above200':above200_count,
+        'pct_above50' : pct_above50,
+        'pct_above200': pct_above200
     }
 
     sector_breadth = df_copy.groupby('sector').agg(
         total_stocks=('symbol','count'),
-        above_count=('above_sma50','sum'),
-        pct_above=('above_sma50', lambda x: round(sum(x)/len(x) * 100,2)),
+        above50=('above_sma50','sum'),
+        above200=('above_sma200','sum'),
+        pct_above50=('above_sma50', lambda x: round(sum(x)/len(x) * 100,2)),
+        pct_above200=('above_sma200', lambda x: round(sum(x)/len(x) * 100,2))
     )
-    sector_breadth['below_count'] = sector_breadth['total_stocks'] - sector_breadth['above_count']
     return {
         'index_breadth' : index_breadth,
-        'sector_breadth' : sector_breadth.to_dict(orient='index')
+        'sector_breadth' : sector_breadth.reset_index()
     }
 
 
