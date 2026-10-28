@@ -103,7 +103,7 @@ def get_relations(index_name, con):
             """,(index_name,)
         )
         rows = cur.fetchall()
-        cols = [desc[0] for desc in cur.desctription]
+        cols = [desc[0] for desc in cur.description]
 
         df = pd.DataFrame(data=rows, columns=cols)
         return df    
@@ -177,14 +177,14 @@ def get_cash_index_total_return(df_daily):
     std_vol = np.sqrt(df_copy['daily_return'].var() * 252)
     gk_vol = np.sqrt(df_copy['daily_gk'].mean() * 252)
 
-    df = pd.DataFrame({
-        'symbol':df_copy['symbol'].first(),
+    df = pd.DataFrame([{
+        'symbol':df_copy['symbol'].iloc[0],
         'total_return':total_return,
         'start_price':start_price,
         'end_price':end_price,
         'std_vol':std_vol,
         'gk_vol':gk_vol
-    })
+    }])
     return df
     
 
