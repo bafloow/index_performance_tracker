@@ -30,6 +30,9 @@ def plot_index_treemap(index_data, selected_index):
         if node == selected_index:
             tree.data[0].customdata[i] = [index_data['index_performance']['total_return'],index_data['index_performance']['gk_vol'],index_data['index_performance']['total_return']]
             tree.data[0].marker.colors[i] = index_data['index_performance']['total_return'].iloc[0]
+        elif node in sec_df.index:
+            tree.data[0].customdata[i] = [sec_df.loc[node,'contribution'],sec_df.loc[node,'gk_vol'],sec_df.loc[node,'total_return']]
+            tree.data[0].marker.colors[i] = sec_df.loc[node,'total_return']
 
     tree.update_traces(
         texttemplate="<b>%{label}</b><br>%{customdata[2]:+.1%}",
@@ -57,8 +60,11 @@ def plot_index_treemap(index_data, selected_index):
                 len=0.75,
                 outlinewidth=0
             ),
-            colorscale=color_list
-        )
+            colorscale=color_list,
+        ),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        margin=dict(l=0,r=0,t=0,b=0)
     )
 
     return tree
