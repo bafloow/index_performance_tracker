@@ -70,8 +70,61 @@ def plot_index_treemap(index_data, selected_index):
     return tree
 
 
-def plot_return_contribution_barchart():
-    pass
+def plot_return_contribution_barchart(index_data, view_option):
+
+    is_return = view_option == 'Total return (%)'
+    val_col = 'total_return' if is_return else 'contribution'
+    hover_unit = '%' if is_return else 'pp'
+
+    sector_data = index_data['sector_performance'].copy()
+    df_sorted = sector_data.sort_values(by=val_col,ascending=True)
+
+    df_sorted[['total_return','contribution','weight']] =df_sorted[['total_return','contribution','weight']]*100
+
+    color_list = ['#00E676' if val >= 0 else "#FF5252" for val in df_sorted[val_col]]
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Bar(y=df_sorted['sector'],x=df_sorted[val_col],
+               orientation='h',
+               marker=dict(color=color_list,line=dict(width=0)),
+               text=[f"{v:+.2f}{hover_unit}" for v in df_sorted[val_col]],
+               textposition='outside',
+               customdata=df_sorted[['weight','total_return','contribution']],
+               hovertemplate=("""
+                              <b>%{y}</b><br>
+                              Index weight: %{customdata[0]:.2f}%<br>
+                              Total return: %{customdata[1]:.2f}%<br>
+                              Index contribution: %{customdata[2]:.3f}%<br>
+                              <extra></extra>
+                              """
+                        )
+                )
+    )
+    max_val = max(abs(df_sorted[val_col].min()), abs(df_sorted[val_col].max())) * 1.25
+    if max_val == 0:
+        max_val = 1.0
+
+    fig.update_layout(
+        template='plotly_dark',
+        height=480,
+        margin=dict(l=10,r=30,t=20,b=20),
+        xaxis=dict(
+                    range=[-max_val,max_val],
+                    tickfont=dict(size=14),
+                    zeroline=True,
+                    zerolinecolor='#555555',
+                    zerolinewidth=1.5,
+                    gridcolor='#2A2E39',
+                    title=None
+                ),
+                yaxis=dict(
+                            tickfont=dict(size=13),
+                            title=None
+                        ),
+    )
+    return fig
+    
 
 
 def plot_sector_breadth_barchart():
