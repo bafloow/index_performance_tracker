@@ -263,8 +263,69 @@ def plot_risk_return_scatter(data,group):
 
 
 
-def plot_market_breath_gauge():
-    pass
+def plot_market_breath_gauge(data,period):
+
+    breadth_df = data['market_breadth']['index_breadth'].copy()
+    is_sma50 = period =='SMA50'
+
+    pct_col = 'pct_above50' if is_sma50 else 'pct_above200'
+    count_col = 'above50' if is_sma50 else 'above200'
+
+    pct_above = breadth_df[pct_col]
+    above_count = breadth_df[count_col]
+    total_count = breadth_df['total_stocks']
+    below_count = total_count - above_count
+
+    if pct_above < 30:
+        bar_color = "#ff4b4b"
+    elif pct_above > 70:
+        bar_color = "#00e676"
+    else:
+        bar_color = "#facc15"
+
+    fig = go.Figure(
+        go.Indicator(
+            mode='gauge+number',
+            value=breadth_df[pct_col],
+            number=dict(suffix='.0%',
+                        valueformat='.1f',
+                        font=dict(size=44)),
+            gauge=dict(
+                axis=dict(range=[0,100],
+                          tickmode='array',
+                          tickvals=[0,30,50,70,100],
+                          ticktext=['0%', '30%', '50%', '70%', '100%'],
+                          tickwidth=2,
+                          tickcolor='white',
+                          tickfont=dict(size=15, color='white')),
+                bar=dict(color=bar_color,thickness=0.75),
+                steps=[
+                    dict(range=[0,30], color="#1c2128"),
+                    dict(range=[31,70], color="#262c36"),
+                    dict(range=[71,100], color="#1c2128")
+                ],
+                threshold=dict(line=dict(color='white',width=3),thickness=0.75,value=50)
+            )
+        )
+    )
+
+    fig.add_annotation(
+        x=0.5,
+        y=-0.1,
+        text=f"{above_count} Above {period} | {below_count} Below {period} (Total: {total_count})",
+        showarrow=False,
+        font=dict(size=16,color='lightgray')
+    )
+
+    fig.update_layout(
+        template='plotly_dark',
+        height=420,
+        margin=dict(l=30, r=30, t=60, b=30)
+    )
+
+    return fig
+
+
 
 
 def render_kpi_stats(index_data):
