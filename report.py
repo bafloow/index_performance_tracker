@@ -95,7 +95,7 @@ def plot_return_contribution_barchart(index_data, view_option):
                               <b>%{y}</b><br>
                               Index weight: %{customdata[0]:.2f}%<br>
                               Total return: %{customdata[1]:.2f}%<br>
-                              Index contribution: %{customdata[2]:.3f}%<br>
+                              Index contribution: %{customdata[2]:.3f}%
                               <extra></extra>
                               """
                         )
@@ -127,8 +127,71 @@ def plot_return_contribution_barchart(index_data, view_option):
     
 
 
-def plot_sector_breadth_barchart():
-    pass
+def plot_sector_breadth_barchart(index_data,period):
+
+    sector_breadth = index_data['market_breadth']['sector_breadth'].copy()
+
+    is_sma50 = period == 'SMA50'
+    val_col = 'pct_above50' if is_sma50 else 'pct_above200'
+    above_count = 'above50' if is_sma50 else 'above200'
+
+    df_sorted = sector_breadth.sort_values(by=val_col, ascending=True)
+    df_sorted['below_count'] = df_sorted['total_stocks'] - df_sorted[above_count]
+
+    color_list=[[0.0, '#FF3B30'],
+                [0.35, '#FF9500'],
+                [0.5,"#DAE55D"],
+                [0.65, '#30D158'],
+                [1.0, "#035E32"]]
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Bar(
+            y=df_sorted['sector'], x=df_sorted[val_col],
+            orientation='h',
+            marker=dict(color=df_sorted[val_col], cmin=0, cmax=100,
+                        colorscale=color_list, showscale=False),
+            text=[f"{v:.2f}%" for v in df_sorted[val_col]],
+            textposition='outside',
+            customdata=df_sorted[['total_stocks',above_count,'below_count']],
+            hovertemplate=("""
+                        <b>%{y}</b><br>
+                        Stocks above sma: %{customdata[1]}<br>
+                        Stocks below sma: %{customdata[2]}<br> 
+                        Total stocks: %{customdata[0]}
+                        <extra></extra>
+                        """)
+        )
+    )
+
+    fig.update_layout(
+        template='plotly_dark',
+        height=480,
+        margin=dict(l=10,r=30,t=20,b=20),
+        xaxis=dict(
+            range=[0,100],
+            tickfont=dict(size=14),
+            title=None
+        ),
+        yaxis=dict(
+            tickfont=dict(size=13),
+            title=None
+        )
+    )
+
+    fig.add_vline(
+        x=50,
+        line_width=1.5,
+        line_dash='dash',
+        line_color='gray',
+        layer='above',
+        annotation_text='50%',
+        annotation_position='top',
+        annotation_font=dict(color='gray', size=12)
+    )
+
+    return fig
+
 
 
 def plot_risk_return_scatter():
