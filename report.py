@@ -194,8 +194,73 @@ def plot_sector_breadth_barchart(index_data,period):
 
 
 
-def plot_risk_return_scatter():
-    pass
+def plot_risk_return_scatter(data,group):
+
+    data_df = data.copy()
+    is_sector = group == 'Sectors'
+    name_col = 'sector' if is_sector else 'company'
+    txt = 'sector' if is_sector else 'txt_company'
+
+    if not is_sector:
+        top_gainers = data_df.nlargest(4,'total_return')['company']
+        top_losers = data_df.nsmallest(4,'total_return')['company']
+        top_vol = data_df.nlargest(3,'gk_vol')['company']
+        outliers = set(top_gainers).union(set(top_losers)).union(set(top_vol))
+        data_df['txt_company'] =  data_df['company'].where(data_df['company'].isin(outliers),"")
+
+    fig = px.scatter(data_frame=data_df, x='gk_vol', y='total_return',
+                     color='sector',
+                     text=txt,
+                     hover_name=name_col,
+                     custom_data=['sector','weight'],
+                     labels={
+                            'total_return': 'Rate of Return',
+                            'gk_vol': 'Garman-Klass Volatility',
+                            'sector': 'Sector'
+                            })
+
+    sector_line = "" if is_sector else "Sector: %{customdata[0]}<br>"
+    fig.update_traces(
+        textposition='top center',
+        marker=dict(size=11, opacity=0.8, line=dict(width=1, color="white")),
+                    hovertemplate=(
+                                "<b>%{hovertext}</b><br>"
+                                f"{sector_line}"
+                                "Rate of Return: %{y:.2%}<br>"
+                                "Garman-Klass Volatility: %{x:.2%}<br>"
+                                "Index weight: %{customdata[1]:.2%}"
+                                "<extra></extra>"
+                            )
+    )
+
+    fig.add_hline(y=0, line_dash='dash', line_color='gray', opacity=0.7)
+    
+    gk_median=data_df['gk_vol'].median()
+    fig.add_vline(x=gk_median, line_dash='dash', line_color='gray', opacity=0.7, line_width=0.7,
+                 annotation_text='GK median', annotation_position='top', annotation_font=dict(color='gray',size=12))
+
+    fig.update_layout(
+        template='plotly_dark',
+        height=550,
+        showlegend=not is_sector,
+        margin=dict(l=10, r=10, t=30, b=40),
+        legend=dict(orientation="h", yanchor="bottom", y=-0.4, xanchor="center", x=0.5,
+                    font=dict(style='italic', size=14, weight=75),
+                    title=dict(font=dict(size=15, weight=100))),
+        xaxis=dict(
+            tickformat='.1%',
+            title_font=dict(size=18),
+            tickfont=dict(size=14)
+        ),
+        yaxis=dict(
+            tickformat='.1%',
+            title_font=dict(size=18),
+            tickfont=dict(size=14)
+        )
+    )
+
+    return fig
+
 
 
 def plot_market_breath_gauge():
