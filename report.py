@@ -343,7 +343,76 @@ def render_kpi_stats(index_data):
                 value=f"{data_df['index_performance']['std_vol'].iloc[0]*100:.2f}%")
 
 
-def render_dashboard():
-    pass
+def render_dashboard(data, selected_index):
+
+    st.title(f"{selected_index} – Weekly Market Summary")
+
+    render_kpi_stats(data)
+    st.markdown('---')
+    
+    st.subheader("Market Heatmap")
+    fig = plot_index_treemap(index_data=data, selected_index=selected_index)
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.markdown('---')
+
+    col_left, col_right = st.columns([1,1])
+    with col_left:
+        st.subheader('Sector Return vs Contribution')
+        metric_view = st.radio('Sector metric:',
+                            options=['Total return (%)','Index contribution'],
+                            horizontal=True,
+                            label_visibility='collapsed')
+        
+        fig2 = plot_return_contribution_barchart(index_data=data,view_option=metric_view)
+        st.plotly_chart(fig2, use_container_width=True)
+
+    with col_right:
+        st.subheader('Sector Breadth')
+        sma_period = st.radio('Choose period:',
+                            options=['SMA50','SMA200'],
+                            horizontal=True,
+                            label_visibility='collapsed')
+        fig3=plot_sector_breadth_barchart(index_data=data, period=sma_period)
+        st.plotly_chart(fig3,use_container_width=True)
+
+    st.markdown('---')
+
+    col_left, col_right = st.columns([1,1])
+    with col_left:
+        st.subheader('Risk vs Return')
+        col_left2, col_right2 = st.columns([1,2])
+        with col_left2:
+            mode = st.radio('Choose group:',
+                        options=['Sectors','Companies'],
+                        horizontal=True,
+                        label_visibility='collapsed')
+            if mode =='Companies':
+                all_sectors = sorted(data['company_performance']['sector'].unique())
+                with col_right2:
+                    selected_sectors = st.multiselect(
+                        'Filter by Sector:',
+                        options=all_sectors,
+                        default=[],
+                        placeholder='Choose sectors...'
+                    )
+                if not selected_sectors:
+                    selected_sectors = all_sectors
+                data_df = data['company_performance'][data['company_performance']['sector'].isin(selected_sectors)].copy()
+            else:
+                data_df = data['sector_performance'].copy()
+
+        fig4 = plot_risk_return_scatter(data=data_df,group=mode)
+        st.plotly_chart(fig4,use_container_width=True)
+
+    with col_right:
+        st.subheader('Market Breadth')
+        sma_period = st.radio('Select period:',
+                            options=['SMA50','SMA200'],
+                            horizontal=True,
+                            label_visibility='collapsed')
+
+        fig5 = plot_market_breath_gauge(data=data, period=sma_period)
+        st.plotly_chart(fig5, use_container_width=True) 
 
     
