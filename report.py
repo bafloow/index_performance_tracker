@@ -287,7 +287,7 @@ def plot_market_breath_gauge(data,period):
         go.Indicator(
             mode='gauge+number',
             value=breadth_df[pct_col],
-            number=dict(suffix='.0%',
+            number=dict(suffix='%',
                         valueformat='.1f',
                         font=dict(size=44)),
             gauge=dict(
@@ -329,7 +329,18 @@ def plot_market_breath_gauge(data,period):
 
 
 def render_kpi_stats(index_data):
-    pass
+
+    data_df = index_data.copy()
+
+    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+    kpi1.metric(label='Index return',
+                value=f"{data_df['index_performance']['total_return'].iloc[0]*100:+.2f}%")
+    kpi2.metric(label='Index breadth (% > SMA50)',
+                value=f"{data_df['market_breadth']['index_breadth']['pct_above50']:.2f}%")
+    kpi3.metric(label='Garman-Klass Volatility',
+                value=f"{data_df['index_performance']['gk_vol'].iloc[0]*100:.2f}%")
+    kpi4.metric(label='Standard Deviation',
+                value=f"{data_df['index_performance']['std_vol'].iloc[0]*100:.2f}%")
 
 
 def render_dashboard():
