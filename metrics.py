@@ -24,7 +24,8 @@ def get_index_company_data(index_name, con, period=5):
             LIMIT {period + 1}
             )
             SELECT 
-            ci.symbol, s.name AS sector,
+            ci.symbol, ci.company_name,
+            s.name AS sector,
             ss.name AS sub_sector,
             dp.date, dp.close, dp.open, dp.volume,
             dp.high, dp.low,
@@ -152,6 +153,7 @@ def get_daily_returns(df):
 def get_companies_total_return(df_daily):
 
     df = df_daily.groupby('symbol').agg(
+        company=('company_name','first'),
         sector=('sector','first'),
         sub_sector=('sub_sector', 'first'),
         weight=('weight', 'first'),
@@ -279,7 +281,6 @@ def get_index_summary(index_name, con, period):
     breadth = get_market_breadth(raw_breadth)
 
     clean_company_perf = company_performance.drop(columns=['var','gk_var']).reset_index()
-    clean_company_perf.rename(columns={'symbol':'company'},inplace=True)
 
     index_summary = {
         'index_performance' : index_performance,
