@@ -122,8 +122,8 @@ def get_nasdaq100_data(wiki,slick,sp500_companies):
 
         symbol = cells[0].text.strip()
         name = cells[1].text.strip()
-        icb_sector = cells[2].text.strip()
-        icb_sub_industry = cells[3].text.strip()
+        icb_sector = cells[3].text.strip()
+        icb_sub_industry = cells[4].text.strip()
 
         if symbol in sp500_dict:
             sector = sp500_dict[symbol].sector
