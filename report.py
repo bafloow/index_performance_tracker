@@ -472,6 +472,51 @@ def render_stock_screener(data, active_cols):
 
     return fig_table
 
+def render_top_5_table(data, is_gainers=True):
+    data_df = data.sort_values(by='total_return',ascending= not is_gainers).head(5).copy()
+    data_df['total_return'] = data_df['total_return'] * 100
+
+    ret_color = "#00e676" if is_gainers else "#ff5252"
+    font_colors = ["#ffffff", "#d0d4dc", "#9ea4b0", ret_color]
+
+    row_even = "#11141c"
+    row_odd = "#181c26"
+    row_bg = [row_even if i % 2 == 0 else row_odd for i in range(len(data_df))]
+
+    fig = go.Figure(
+        data=[
+            go.Table(
+                columnwidth=[75, 150, 140, 85],
+                header=dict(
+                    values=["<b>Symbol</b>", "<b>Company</b>", "<b>Sector</b>", "<b>Return</b>"],
+                    fill_color="#1f2430",
+                    line_color="#2b303c",
+                    align=["left", "left", "left", "right"],
+                    font=dict(color="#ffffff", size=13),
+                    height=34,
+                ),
+                cells=dict(
+                    values=[
+                        data_df['symbol'],
+                        data_df['company'],
+                        data_df['sector'],
+                        data_df['total_return'].map("{:+.2f}%".format),
+                    ],
+                    fill_color=[row_bg] * 4,
+                    line_color="#2b303c",
+                    align=["left", "left", "left", "right"],
+                    font=dict(color=font_colors, size=12),
+                    height=30,
+                )
+            )
+        ]
+    )
+    fig.update_layout(
+        margin=dict(l=0,r=0,t=4,b=0),
+        height=195,
+        paper_bgcolor="rgba(0,0,0,0)",
+    )
+    return fig
 
 def render_dashboard(data, selected_index):
 
@@ -544,6 +589,21 @@ def render_dashboard(data, selected_index):
 
         fig5 = plot_market_breath_gauge(data=data, period=sma_period)
         st.plotly_chart(fig5, use_container_width=True) 
+
+    st.markdown('---')
+
+    col_gainers, col_losers = st.columns([2,2])
+    with col_gainers:
+        st.markdown("<span style='color: #00e676; font-size: 1.5rem; font-weight: 600;'>▲ Top 5 Gainers</span>",
+                    unsafe_allow_html=True,)
+        fig_gainers = render_top_5_table(data=data['company_performance'],is_gainers=True)
+        st.plotly_chart(fig_gainers,use_container_width=True)
+
+    with col_losers:
+        st.markdown("<span style='color: #ff5252; font-size: 1.5rem; font-weight: 600;'>▼ Top 5 Losers</span>",
+                    unsafe_allow_html=True,)
+        fig_losers = render_top_5_table(data=data['company_performance'],is_gainers=False)
+        st.plotly_chart(fig_losers,use_container_width=True)
 
     st.markdown('---')
 
