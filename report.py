@@ -6,7 +6,7 @@ from metrics import get_market_summary
 def plot_index_treemap(index_data, selected_index):
 
     df_tree = index_data['company_performance'].copy()
-    df_tree['label'] = (df_tree['company'] + "<br>" + (df_tree['total_return']*100).map('{:+.1f}%'.format))
+    df_tree['label'] = (df_tree['symbol'] + "<br>" + (df_tree['total_return']*100).map('{:+.1f}%'.format))
 
     sec_df = index_data['sector_performance'].copy()
     if 'sector' in sec_df.columns:
@@ -19,7 +19,7 @@ def plot_index_treemap(index_data, selected_index):
     ]
 
     tree = px.treemap(data_frame=df_tree,
-                      path=[px.Constant(selected_index),'sector','company'],
+                      path=[px.Constant(selected_index),'sector','symbol'],
                       values='weight',
                       color='total_return',color_continuous_scale=color_list,color_continuous_midpoint=0,
                       custom_data=df_tree[['contribution','gk_vol','total_return']],
@@ -326,8 +326,6 @@ def plot_market_breath_gauge(data,period):
     return fig
 
 
-
-
 def render_kpi_stats(index_data):
 
     data_df = index_data.copy()
@@ -341,6 +339,138 @@ def render_kpi_stats(index_data):
                 value=f"{data_df['index_performance']['gk_vol'].iloc[0]*100:.2f}%")
     kpi4.metric(label='Standard Deviation',
                 value=f"{data_df['index_performance']['std_vol'].iloc[0]*100:.2f}%")
+
+
+def render_stock_screener(data, active_cols):
+
+    data_df = data.copy()
+
+    row_even = "#11141c"
+    row_odd = "#181c26"
+    row_bg = [row_even if i % 2 == 0 else row_odd for i in range(len(data_df))]
+
+    COLUMN_CONFIG = {
+    "symbol": {
+        "label": "<b>Symbol</b>",
+        "width": 75,
+        "align": "left",
+        "format": lambda s: s.astype(str),
+        "color": lambda s: "#ffffff",
+    },
+    "company": {
+        "label": "<b>Company</b>",
+        "width": 150,
+        "align": "left",
+        "format": lambda s: s.astype(str),
+        "color": lambda s: "#d0d4dc",
+    },
+    "sector": {
+        "label": "<b>Sector</b>",
+        "width": 150,
+        "align": "left",
+        "format": lambda s: s.astype(str),
+        "color": lambda s: "#9ea4b0",
+    },
+    "sub_sector": {
+        "label": "<b>Sub-Sector</b>",
+        "width": 160,
+        "align": "left",
+        "format": lambda s: s.astype(str),
+        "color": lambda s: "#9ea4b0",
+    },
+    "weight": {
+        "label": "<b>Weight</b>",
+        "width": 85,
+        "align": "right",
+        "format": lambda s: s.map("{:.2f}%".format),
+        "color": lambda s: "#e0e0e0",
+    },
+    "start_price": {
+        "label": "<b>Start Price</b>",
+        "width": 90,
+        "align": "right",
+        "format": lambda s: s.map("{:.2f}".format),
+        "color": lambda s: "#e0e0e0",
+    },
+    "end_price": {
+        "label": "<b>End Price</b>",
+        "width": 90,
+        "align": "right",
+        "format": lambda s: s.map("{:.2f}".format),
+        "color": lambda s: "#e0e0e0",
+    },
+    "total_return": {
+        "label": "<b>Return</b>",
+        "width": 90,
+        "align": "right",
+        "format": lambda s: s.map("{:.2f}%".format),
+        "color": lambda s: [
+            "#00e676" if v > 0 else "#ff5252" if v < 0 else "#e0e0e0" for v in s
+        ],
+    },
+    "gk_vol": {
+        "label": "<b>GK Volatility</b>",
+        "width": 90,
+        "align": "right",
+        "format": lambda s: s.map("{:.2f}%".format),
+        "color": lambda s: "#e0e0e0",
+    },
+    "std_vol" : {
+        "label": "<b>Std Dev</b>",
+        "width": 90,
+        "align": "right",
+        "format": lambda s: s.map("{:.2f}%".format),
+        "color": lambda s: "#e0e0e0",
+    },
+    "contribution": {
+        "label": "<b>Contribution</b>",
+        "width": 90,
+        "align": "right",
+        "format": lambda s: s.map("{:.2f}%".format),
+        "color": lambda s: [
+            "#00e676" if v > 0 else "#ff5252" if v < 0 else "#e0e0e0" for v in s
+        ],
+    }}
+    headers = [COLUMN_CONFIG[c]["label"] for c in active_cols]
+    aligns = [COLUMN_CONFIG[c]['align'] for c in active_cols]
+    widths = [COLUMN_CONFIG[c]['width'] for c in active_cols]
+
+    cell_values = [COLUMN_CONFIG[c]["format"](data_df[c]) for c in active_cols]
+    cell_colors = [COLUMN_CONFIG[c]["color"](data_df[c]) for c in active_cols]
+
+    fig_table = go.Figure(
+    data=[
+        go.Table(
+            columnwidth=widths,
+            header=dict(
+                values=headers,
+                fill_color="#1f2430",
+                line_color="#2b303c",
+                align=aligns,
+                font=dict(color="#ffffff", size=13),
+                height=36,
+            ),
+            cells=dict(
+                values=cell_values,
+                fill_color=[row_bg] * len(active_cols),
+                line_color="#2b303c",
+                align=aligns,
+                font=dict(
+                    color=cell_colors,
+                    size=12,
+                ),
+                height=32,
+            ),
+        )
+    ])
+
+    fig_table.update_layout(
+    margin=dict(l=0, r=0, t=0, b=0),
+    height=400,
+    paper_bgcolor="rgba(0,0,0,0)",
+    )
+
+    return fig_table
 
 
 def render_dashboard(data, selected_index):
@@ -415,4 +545,87 @@ def render_dashboard(data, selected_index):
         fig5 = plot_market_breath_gauge(data=data, period=sma_period)
         st.plotly_chart(fig5, use_container_width=True) 
 
+    st.markdown('---')
+
+    st.subheader('Company Screener')
+
+    company_performance=data['company_performance'].copy()
+
+    SORT_OPTIONS = {
+    "Weight": "weight",
+    "Return (High to Low)": ("total_return", False),
+    "Return (Low to High)": ("total_return", True),
+    "GK Volatility": "gk_vol",
+    "Contribution": "contribution",
+    }
+
+    col_search, col_sector, col_subsector, col_sort = st.columns([2, 2, 2, 1.5])
+    with col_search:
+        search_query = st.text_input("Search Symbol or Company", placeholder='e.g. NVDA, Apple...',)
     
+    with col_sector:
+        selected_sectors = st.multiselect(
+            'Filter by Sector',
+            options = sorted(company_performance['sector'].unique()),
+            placeholder = 'All Sectors',
+        )
+
+    with col_subsector:
+        if selected_sectors:
+            available_subsectors = sorted(company_performance[company_performance['sector'].isin(selected_sectors)]['sub_sector'].unique())
+        else:
+            available_subsectors = sorted(company_performance['sub_sector'].unique())
+
+        selected_subsectors = st.multiselect('Filter by Sub-Sector',
+            options=available_subsectors,
+            placeholder='All Sub-Sectors'
+        )
+
+    with col_sort:
+        selected_sort_label = st.selectbox("Sort by",
+            options=list(SORT_OPTIONS.keys()), index=0,
+        )
+
+    df = company_performance.copy()
+
+    if search_query:
+        query = search_query.strip()
+        df = df[df["company"].str.contains(query, case=False, na=False) | df["symbol"].str.contains(query, case=False, na=False)]    
+    
+    if selected_sectors:
+        df = df[df['sector'].isin(selected_sectors)]
+
+    if selected_subsectors:
+        df = df[df['sub_sector'].isin(selected_subsectors)]
+
+
+    sort_target = SORT_OPTIONS[selected_sort_label]
+    if isinstance(sort_target, tuple):
+        sort_col, is_asc = sort_target
+    else:
+        sort_col, is_asc = sort_target, False
+    display_df = df.sort_values(by=sort_col, ascending=is_asc).copy()
+
+    pct_cols = ['weight','total_return','contribution','std_vol','gk_vol']
+    for col in pct_cols:
+        if col in display_df.columns:
+            display_df[col] = display_df[col] * 100
+
+    col_toggle, col_info = st.columns([1.5, 1])
+    with col_toggle:
+        show_all_cols = st.toggle("Show detailed metrics (Prices, Sub-Sector, Volatility)", value=False)
+
+    with col_info:
+        st.markdown(
+            f"<p style='text-align: right; color: #9ea4b0; margin-top: 10px; font-size: 0.85rem;'>"
+            f"Showing <b>{len(display_df)}</b> of <b>{len(company_performance)}</b> companies"
+            f"</p>",
+            unsafe_allow_html=True
+        )
+        
+    default_cols = ['symbol','company','sector','weight','total_return','gk_vol' ]
+    all_cols = [c for c in display_df.columns]
+    active_cols = all_cols if show_all_cols else default_cols
+
+    fig5 = render_stock_screener(data=display_df, active_cols=active_cols)
+    st.plotly_chart(fig5, use_container_width=True)
